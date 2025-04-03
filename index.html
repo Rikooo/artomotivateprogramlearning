@@ -1,207 +1,333 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        const welcomeScreen = document.querySelector("#welcome-screen");
+        const startExperienceButton = document.querySelector("#start-experience");
+        const mainContent = document.querySelector(".container");
+        const startButton = document.querySelector("#start-button");
+        const stopButton = document.querySelector("#stop-button");
+        const rotateButton = document.querySelector("#rotate-button");
+        const scaleUpButton = document.querySelector("#scale-up-button"); // Renamed from moveUpButton
+        const scaleDownButton = document.querySelector("#scale-down-button"); // Renamed from moveDownButton
+        const nextImageButton = document.querySelector("#next-image-button");
+        const prevImageButton = document.querySelector("#prev-image-button");
+        const imageCounter = document.querySelector("#image-counter");
 
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function() {
-	const list = ["glasses1", "glasses2", "hat1", "hat2", "earring"];
-	const visibles = [true, false, false, true, true];
-	const setVisible = (button, entities, visible) => {
-	  if (visible) {
-	    button.classList.add("selected");
-	  } else {
-	    button.classList.remove("selected");
-	  }
-	  entities.forEach((entity) => {
-	    entity.setAttribute("visible", visible);
-	  });
-	}
-	list.forEach((item, index) => {
-	  const button = document.querySelector("#" + item);
-	  const entities = document.querySelectorAll("." + item + "-entity");
-	  setVisible(button, entities, visibles[index]);
-	  button.addEventListener('click', () => {
-	    visibles[index] = !visibles[index];
-	    setVisible(button, entities, visibles[index]);
-	  });
-	});
-      })
+        const scene = document.querySelector('a-scene');
+        const arImage = document.querySelector('#ar-image'); // Direct reference to the plane
+
+        // Define the total number of images
+        const totalImages = 30; // Change this to match your actual number of images
+
+        // Track which image is currently displayed
+        let currentImageIndex = 1;
+
+        // Track plane position, rotation and scale relative to marker
+        let positionY = 0; 
+        let rotationY = 0;
+        let positionZ = 0;
+        let initialRotationX = -90;
+        let currentScale = 1; // Initialize scale factor
+
+        // Function to update the image counter display
+        function updateImageCounter() {
+          imageCounter.textContent = `${currentImageIndex}/${totalImages}`;
+        }
+
+        // Function to enter AR mode and initialize
+        function startARExperience() {
+          welcomeScreen.style.display = "none";
+          mainContent.style.display = "block";
+
+          // Initialize AR scene
+          if (scene.hasLoaded) {
+            enableAR();
+          } else {
+            scene.addEventListener('loaded', enableAR);
+          }
+        }
+
+        // Enable AR functionality
+        function enableAR() {
+          console.log("AR scene is ready");
+          // Hide image initially (marker detection will make it visible if start button also pressed)
+          arImage.setAttribute('visible', true);
+          // Initialize image counter
+          updateImageCounter();
+          // Set initial rotation/position including Z
+          arImage.setAttribute('position', `0 ${positionY} ${positionZ}`);
+          arImage.setAttribute('rotation', `${initialRotationX} ${rotationY} 0`);
+          arImage.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+        }
+
+        // Show/hide the AR content (visibility is now tied to marker + this button)
+        startButton.addEventListener('click', () => {
+          arImage.setAttribute('visible', true);
+          console.log("AR content visibility enabled");
+        });
+
+        stopButton.addEventListener('click', () => {
+          arImage.setAttribute('visible', false);
+          console.log("AR content visibility disabled");
+        });
+
+        // Next image button handler
+        nextImageButton.addEventListener('click', () => {
+          currentImageIndex = currentImageIndex < totalImages ? currentImageIndex + 1 : 1;
+          arImage.setAttribute('src', `#image${currentImageIndex}`);
+          updateImageCounter();
+          console.log(`Switched to image ${currentImageIndex}`);
+        });
+
+        // Previous image button handler
+        prevImageButton.addEventListener('click', () => {
+          currentImageIndex = currentImageIndex > 1 ? currentImageIndex - 1 : totalImages;
+          arImage.setAttribute('src', `#image${currentImageIndex}`);
+          updateImageCounter();
+          console.log(`Switched to image ${currentImageIndex}`);
+        });
+
+        // Rotate the image around its Y axis (relative to marker)
+        rotateButton.addEventListener('click', () => {
+          rotationY += 10;
+          arImage.setAttribute('rotation', `${initialRotationX} ${rotationY} 0`);
+          console.log(`Rotation set to: ${initialRotationX} ${rotationY} 0`);
+        });
+
+        // MODIFIED: Scale up the image (increase size)
+        scaleUpButton.addEventListener('click', () => {
+          currentScale += 0.1;
+          arImage.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+          console.log(`Scale set to: ${currentScale}`);
+        });
+
+        // MODIFIED: Scale down the image (decrease size)
+        scaleDownButton.addEventListener('click', () => {
+          // Prevent scale from going negative or too small
+          if (currentScale > 0.2) {
+            currentScale -= 0.1;
+            arImage.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+            console.log(`Scale set to: ${currentScale}`);
+          }
+        });
+
+        // Start AR experience when button is clicked
+        startExperienceButton.addEventListener("click", startARExperience);
+
+        // Handle clicks on the image
+        arImage.addEventListener("click", () => {
+          console.log("Image clicked");
+          // Animate scale on click
+          // Store original scale to return to after animation
+          const originalScale = currentScale;
+          
+          // Scale up animation
+          arImage.setAttribute('animation__scaleup', `property: scale; from: ${originalScale} ${originalScale} ${originalScale}; to: ${originalScale * 1.2} ${originalScale * 1.2} ${originalScale * 1.2}; dur: 200; easing: easeInOutQuad; startEvents: click`);
+          
+          // Remove previous scale down animation if exists
+          arImage.removeAttribute('animation__scaledown');
+          
+          // Scale back down after a delay
+          setTimeout(() => {
+            arImage.setAttribute('animation__scaledown', `property: scale; from: ${originalScale * 1.2} ${originalScale * 1.2} ${originalScale * 1.2}; to: ${originalScale} ${originalScale} ${originalScale}; dur: 200; easing: easeInOutQuad;`);
+          }, 210);
+        });
+      });
     </script>
+
     <style>
-      body {
+      * {
         margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-      .example-container {
+
+      body {
+        font-family: Arial, sans-serif;
         overflow: hidden;
+        background-color: black;
+      }
+
+      .welcome-screen {
         position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        z-index: 20;
+      }
+
+      .container {
+        display: none; /* Initially hidden until Start Experience is clicked */
         width: 100%;
         height: 100%;
       }
-      .options-panel {
-	position: fixed;
-	left: 0;
-	top: 0;
-	z-index: 2;
+
+      #control-overlay {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        z-index: 10;
+        max-width: 95%;
+        padding: 8px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
       }
-      .options-panel img {
-	border: solid 2px;
-	width: 50px;
-	height: 50px;
-	object-fit: cover;
-	cursor: pointer;
+
+      /* Smaller buttons for mobile */
+      button {
+        padding: 6px 10px;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.8);
+        color: black;
+        transition: background 0.3s;
+        min-width: 40px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .options-panel img.selected {
-	border-color: green;
+
+      button:hover {
+        background-color: white;
+      }
+
+      /* Navigation buttons styling */
+      #prev-image-button, #next-image-button {
+        background-color: rgba(100, 200, 255, 0.8);
+        width: 40px;
+      }
+
+      #prev-image-button:hover, #next-image-button:hover {
+        background-color: rgba(100, 200, 255, 1);
+      }
+
+      /* Image counter styling */
+      #image-counter {
+        padding: 6px 10px;
+        font-size: 14px;
+        background-color: rgba(50, 50, 50, 0.8);
+        color: white;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        height: 32px;
+      }
+
+      /* Make clickable elements in A-Frame respond to input */
+      .clickable {
+        cursor: pointer;
+      }
+
+      /* Add row class for layout grouping */
+      .button-row {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
       }
     </style>
   </head>
   <body>
-    <div class="example-container">
-      <div class="options-panel">
-	<img id="hat1" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/thumbnail.png"/>
-	<img id="hat2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/thumbnail.png"/>
-	<img id="glasses1" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/thumbnail.png"/>
-	<img id="glasses2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/thumbnail.png"/>
-	<img id="earring" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/earring/thumbnail.png"/>
-      </div>
-      <a-scene mindar-face embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-        <a-assets>
-          <a-asset-item id="headModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/sparkar/headOccluder.glb"></a-asset-item>
-          <a-asset-item id="glassesModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
-          <a-asset-item id="glassesModel2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/scene.gltf"></a-asset-item>
-          <a-asset-item id="hatModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/scene.gltf"></a-asset-item>
-          <a-asset-item id="hatModel2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/scene.gltf"></a-asset-item>
-          <a-asset-item id="earringModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/earring/scene.gltf"></a-asset-item>
-        </a-assets>
-        <a-camera active="false" position="0 0 0"></a-camera>
-	<!-- head occluder -->
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model mindar-face-occluder position="0 -0.3 0.15"rotation="0 0 0" scale="0.065 0.065 0.065" src="#headModel"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 10">
-	  <a-gltf-model rotation="0 -0 0" position="0 1.0 -0.5" scale="0.35 0.35 0.35" src="#hatModel" class="hat1-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 10">
-	  <a-gltf-model rotation="0 -0 0" position="0 -0.2 -0.5" scale="0.008 0.008 0.008" src="#hatModel2" class="hat2-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model rotation="0 -0 0" position="0 0 0" scale="0.01 0.01 0.01" src="#glassesModel" class="glasses1-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model rotation="0 -90 0" position="0 -0.3 0" scale="0.6 0.6 0.6" src="#glassesModel2" class="glasses2-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 127">
-	  <a-gltf-model rotation="-0.1 -0 0" position="0 -0.3 -0.3" scale="0.05 0.05 0.05" src="#earringModel" class="earring-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 356">
-	  <a-gltf-model rotation="0.1 -0 0" position="0 -0.3 -0.3" scale="0.05 0.05 0.05" src="#earringModel" class="earring-entity" visible="false"></a-gltf-model>
-        </a-entity>
-      </a-scene>
+    <div id="welcome-screen" class="welcome-screen">
+      <h1>AR to Enhance Programming Motivation</h1>
+      <p>Instructions: <br>
+       - You will be taught a bubble sort algorithm using AR<br>
+       - Click Start Experience to begin (make sure to enable camera) <br>
+       - Point your camera at the HIRO marker (They can be searched on google and printed / pointed to)<br>
+       - CLICK THE SHOW BUTTON to enable
+       - Follow through the algorithm learning process<br>
+       - Use the controls to interact with the AR content (+/- buttons now control image size)
+      </p>
+      <button id="start-experience">Start Experience</button>
     </div>
-  </body>
-</html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function() {
-	const list = ["glasses1", "glasses2", "hat1", "hat2", "earring"];
-	const visibles = [true, false, false, true, true];
-	const setVisible = (button, entities, visible) => {
-	  if (visible) {
-	    button.classList.add("selected");
-	  } else {
-	    button.classList.remove("selected");
-	  }
-	  entities.forEach((entity) => {
-	    entity.setAttribute("visible", visible);
-	  });
-	}
-	list.forEach((item, index) => {
-	  const button = document.querySelector("#" + item);
-	  const entities = document.querySelectorAll("." + item + "-entity");
-	  setVisible(button, entities, visibles[index]);
-	  button.addEventListener('click', () => {
-	    visibles[index] = !visibles[index];
-	    setVisible(button, entities, visibles[index]);
-	  });
-	});
-      })
-    </script>
-    <style>
-      body {
-        margin: 0;
-      }
-      .example-container {
-        overflow: hidden;
-        position: absolute;
-        width: 100%;
-        height: 100%;
-      }
-      .options-panel {
-	position: fixed;
-	left: 0;
-	top: 0;
-	z-index: 2;
-      }
-      .options-panel img {
-	border: solid 2px;
-	width: 50px;
-	height: 50px;
-	object-fit: cover;
-	cursor: pointer;
-      }
-      .options-panel img.selected {
-	border-color: green;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="example-container">
-      <div class="options-panel">
-	<img id="hat1" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/thumbnail.png"/>
-	<img id="hat2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/thumbnail.png"/>
-	<img id="glasses1" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/thumbnail.png"/>
-	<img id="glasses2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/thumbnail.png"/>
-	<img id="earring" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/earring/thumbnail.png"/>
-      </div>
-      <a-scene mindar-face embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+
+    <div class="container">
+      <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix;">
         <a-assets>
-          <a-asset-item id="headModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/sparkar/headOccluder.glb"></a-asset-item>
-          <a-asset-item id="glassesModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
-          <a-asset-item id="glassesModel2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/scene.gltf"></a-asset-item>
-          <a-asset-item id="hatModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/scene.gltf"></a-asset-item>
-          <a-asset-item id="hatModel2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/scene.gltf"></a-asset-item>
-          <a-asset-item id="earringModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/earring/scene.gltf"></a-asset-item>
+          <img id="image1" src="assets/sort1.png" />
+          <img id="image2" src="assets/sort2.png" />
+          <img id="image3" src="assets/sort3.png" />
+          <img id="image4" src="assets/sort4.png" />
+          <img id="image5" src="assets/sort5.png" />
+          <img id="image6" src="assets/sort6.png" />
+          <img id="image7" src="assets/sort7.png" />
+          <img id="image8" src="assets/sort8.png" />
+          <img id="image9" src="assets/sort9.png" />
+          <img id="image10" src="assets/sort10.png" />
+          <img id="image11" src="assets/sort11.png" />
+          <img id="image12" src="assets/sort12.png" />
+          <img id="image13" src="assets/sort13.png" />
+          <img id="image14" src="assets/sort14.png" />
+          <img id="image15" src="assets/sort15.png" />
+          <img id="image16" src="assets/sort16.png" />
+          <img id="image17" src="assets/sort17.png" />
+          <img id="image18" src="assets/sort18.png" />
+          <img id="image19" src="assets/sort19.png" />
+          <img id="image20" src="assets/sort20.png" />
+          <img id="image21" src="assets/sort21.png" />
+          <img id="image22" src="assets/sort22.png" />
+          <img id="image23" src="assets/sort23.png" />
+          <img id="image24" src="assets/sort24.png" />
+          <img id="image25" src="assets/sort25.png" />
+          <img id="image26" src="assets/sort26.png" />
+          <img id="image27" src="assets/sort27.png" />
+          <img id="image28" src="assets/sort28.png" />
+          <img id="image29" src="assets/sort29.png" />
+          <img id="image30" src="assets/sort30.png" />
         </a-assets>
-        <a-camera active="false" position="0 0 0"></a-camera>
-	<!-- head occluder -->
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model mindar-face-occluder position="0 -0.3 0.15"rotation="0 0 0" scale="0.065 0.065 0.065" src="#headModel"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 10">
-	  <a-gltf-model rotation="0 -0 0" position="0 1.0 -0.5" scale="0.35 0.35 0.35" src="#hatModel" class="hat1-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 10">
-	  <a-gltf-model rotation="0 -0 0" position="0 -0.2 -0.5" scale="0.008 0.008 0.008" src="#hatModel2" class="hat2-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model rotation="0 -0 0" position="0 0 0" scale="0.01 0.01 0.01" src="#glassesModel" class="glasses1-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 168">
-	  <a-gltf-model rotation="0 -90 0" position="0 -0.3 0" scale="0.6 0.6 0.6" src="#glassesModel2" class="glasses2-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 127">
-	  <a-gltf-model rotation="-0.1 -0 0" position="0 -0.3 -0.3" scale="0.05 0.05 0.05" src="#earringModel" class="earring-entity" visible="false"></a-gltf-model>
-        </a-entity>
-        <a-entity mindar-face-target="anchorIndex: 356">
-	  <a-gltf-model rotation="0.1 -0 0" position="0 -0.3 -0.3" scale="0.05 0.05 0.05" src="#earringModel" class="earring-entity" visible="false"></a-gltf-model>
-        </a-entity>
+
+        <a-marker preset="hiro">
+          <a-plane
+            id="ar-image"
+            class="clickable"
+            src="#image1"
+            position="0 0 0"  rotation="-90 0 0" height="1"
+            width="1"
+            scale="1 1 1"   visible="false"  material="transparent: true; opacity: 1.0"
+            >
+          </a-plane>
+
+        </a-marker>
+        <a-entity camera></a-entity>
+
       </a-scene>
+
+      <div id="control-overlay">
+        <div class="button-row">
+          <button id="start-button">Show</button>
+          <button id="stop-button">Hide</button>
+          <button id="prev-image-button"><</button>
+          <div id="image-counter">1/30</div>
+          <button id="next-image-button">></button>
+        </div>
+        <div class="button-row">
+          <button id="rotate-button">Rotate</button>
+          <button id="scale-up-button">+</button> <button id="scale-down-button">-</button> </div>
+      </div>
     </div>
   </body>
 </html>
