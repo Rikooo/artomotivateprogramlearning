@@ -6,4 +6,5 @@ Vist the application on GitHub Pages (https://rikooo.github.io/artomotivateprogr
 2. Point camera towards a "HIRO" marker (as attatched bellow or can be easily found on google images)
 3. For best use of application, it is recommended to print the marker but it should still work when scanning a computer screen
 4. Follow the instructions on the app and enjoy :)
-![Hiro_marker_ARjs](https://github.com/user-attachments/assets/39d11352-8f32-4fa9-a294-d1430864dd0c)
+
+![Pattern-hiro](https://github.com/user-attachments/assets/a3e27979-488e-495a-8c53-c9e8a99dc91c)
